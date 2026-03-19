@@ -5,6 +5,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import { getLeads } from '../../api/leads';
+import { vendorRegions } from '../../utils/helpers';
 
 export default function VendedoresManagementPage() {
   const navigate = useNavigate();
@@ -44,6 +45,11 @@ export default function VendedoresManagementPage() {
           if (lead.urgencia === 'alta' || lead.probabilidade === true) {
             vendorsMap[vId].activeLeads += 1;
           }
+
+          // Atribuição de Região baseada no helpers.js
+          const normalizedVid = vId.toLowerCase().replace(/_/g, ' ');
+          const matchingKey = Object.keys(vendorRegions).find(k => k.toLowerCase() === normalizedVid);
+          vendorsMap[vId].region = matchingKey ? vendorRegions[matchingKey].join(', ') : 'Não definida';
         });
 
         const sortedTeam = Object.values(vendorsMap).sort((a, b) => b.leadsCurated - a.leadsCurated);
@@ -89,10 +95,10 @@ export default function VendedoresManagementPage() {
                 <TableRow>
                   <TableCell><strong>Vendedor (Instância)</strong></TableCell>
                   <TableCell><strong>Papel Estático</strong></TableCell>
-                  <TableCell align="center"><strong>Status Conexão</strong></TableCell>
-                  <TableCell align="center"><strong>Leads Processados</strong></TableCell>
-                  <TableCell align="center"><strong>Oportunidades Ativas</strong></TableCell>
-                  <TableCell align="right"><strong>Ações</strong></TableCell>
+                   <TableCell align="center"><strong>Região / Estados</strong></TableCell>
+                   <TableCell align="center"><strong>Leads Processados</strong></TableCell>
+                   <TableCell align="center"><strong>Oportunidades Ativas</strong></TableCell>
+                   <TableCell align="right"><strong>Ações</strong></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -111,17 +117,14 @@ export default function VendedoresManagementPage() {
                       <Typography variant="body2">Vendedor</Typography>
                       <Typography variant="caption" color="secondary">Greatek Interno</Typography>
                     </TableCell>
-                    <TableCell align="center">
-                      <Chip 
-                        label={member.status} 
-                        size="small" 
-                        color="success" 
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell align="center">{member.leadsCurated}</TableCell>
-                    <TableCell align="center">{member.activeLeads}</TableCell>
-                    <TableCell align="right">
+                     <TableCell align="center">
+                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {member.region}
+                      </Typography>
+                     </TableCell>
+                     <TableCell align="center">{member.leadsCurated}</TableCell>
+                     <TableCell align="center">{member.activeLeads}</TableCell>
+                     <TableCell align="right">
                       <Button 
                         startIcon={<AssessmentIcon />} 
                         size="small"
@@ -133,7 +136,7 @@ export default function VendedoresManagementPage() {
                       <IconButton size="small" color="primary">
                         <MarkEmailReadIcon fontSize="small" />
                       </IconButton>
-                    </TableCell>
+                     </TableCell>
                   </TableRow>
                 ))}
                 {salesTeam.length === 0 && (
