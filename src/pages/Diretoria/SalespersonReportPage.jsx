@@ -148,24 +148,10 @@ export default function SalespersonReportPage() {
             </Paper>
           </Grid>
           
-          {/* Quadro Extra de Insight Executivo */}
-          <Grid item xs={12}>
-            <Paper sx={{ 
-              p: 4, 
-              borderRadius: 4, 
-              backgroundColor: theme.palette.greatek.darkBlue, 
-              color: 'white',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
-            }}>
-              <Typography variant="h5" fontWeight="bold" gutterBottom>Diretiva Executiva IA</Typography>
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
-              <Typography variant="body1" sx={{ opacity: 0.9, lineHeight: 1.8 }}>
-                O vendedor <strong>{vendedorData?.name}</strong> está mantendo uma cadência de {vendedorData?.kpis.leadsTratados} leads. 
-                A recomendação atual da IA é focar na conversão das oportunidades marcadas como "Alta Chance de Fechar", 
-                priorizando o atendimento regional de hoje ({vendedorData?.stats.hoje} novos leads).
-              </Typography>
-            </Paper>
-          </Grid>
+      {/* Diretiva Executiva IA — gerada dinamicamente */}
+      <Grid item xs={12} sx={{ mb: 6 }}>
+        <DynamicExecutiveDirective vendedorData={vendedorData} leads={vendedorData?.leads || []} />
+      </Grid>
         </Grid>
       </Box>
 
@@ -188,4 +174,124 @@ export default function SalespersonReportPage() {
     </Box>
   );
 }
+
+// --- Componente de Diretiva Executiva IA ---
+function DynamicExecutiveDirective({ vendedorData, leads }) {
+  const theme = useTheme();
+  const [diretiva, setDiretiva] = useState('Carregando análise executiva...');
+  const [loadingDiretiva, setLoadingDiretiva] = useState(true);
+
+  useEffect(() => {
+    if (!vendedorData || !leads || leads.length === 0) return;
+
+    const fetchDiretiva = async () => {
+      setLoadingDiretiva(true);
+      try {
+        const prompt = gerarDiretivaExecutiva(vendedorData, leads);
+
+        const response = await fetch(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-goog-api-key': import.meta.env.VITE_GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+            })
+          }
+        );
+
+        const data = await response.json();
+        const texto = data.candidates[0].content.parts[0].text;
+        setDiretiva(texto);
+      } catch (err) {
+        console.error('Erro ao gerar diretiva:', err);
+        setDiretiva('Não foi possível gerar a análise no momento. Tente novamente em instantes.');
+      } finally {
+        setLoadingDiretiva(false);
+      }
+    };
+
+    fetchDiretiva();
+  }, [vendedorData, leads]);
+
+  return (
+    <Paper sx={{
+      p: 4,
+      borderRadius: 4,
+      backgroundColor: theme.palette.greatek.darkBlue,
+      color: 'white',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+    }}>
+      <Typography variant="h5" fontWeight="bold" gutterBottom>
+        Diretiva Executiva IA
+      </Typography>
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 2 }} />
+
+      {loadingDiretiva ? (
+        <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic' }}>
+          Analisando desempenho e gerando diretiva...
+        </Typography>
+      ) : (
+        <Typography
+          variant="body1"
+          sx={{ opacity: 0.9, lineHeight: 2, whiteSpace: 'pre-line' }}
+        >
+          {diretiva}
+        </Typography>
+      )}
+    </Paper>
+  );
+}
+
+const gerarDiretivaExecutiva = (vendedorData, leads) => {
+  const prompt = `Você é um diretor comercial sênior com 20 anos de experiência em vendas B2B de tecnologia e infraestrutura. Você analisa o desempenho de vendedores e gera diretrizes executivas precisas, diretas e acionáveis. Você NUNCA elogia sem embasamento em dados. Você NUNCA suaviza problemas reais. Sua análise vale milhões para a empresa.
+
+## DADOS DO VENDEDOR
+Nome: ${vendedorData.name}
+Instância/ID: ${vendedorData.id}
+Leads tratados no total: ${vendedorData.kpis.leadsTratados}
+Leads hoje: ${vendedorData.stats.hoje}
+Leads esta semana: ${vendedorData.stats.semana}
+Leads este mês: ${vendedorData.stats.mes}
+
+## LEADS ANALISADOS PELA IA (dados reais do CRM)
+${leads.map((l, i) => `
+Lead ${i + 1}:
+- Nome: ${l.nome_exibicao || l.nome_lead}
+- Empresa: ${l.nome_empresa}
+- Interesse: ${l.interesse_lead || l.produto_ofertado}
+- Urgência: ${l.urgencia}
+- Temperatura: ${l.temperatura || 'Não informada'}
+- Probabilidade de fechamento: ${l.probabilidade_percent || 0}%
+- Objeções levantadas: ${l.objecoes}
+- Resumo da conversa: ${l.resumo}
+- Próximo passo registrado: ${l.proximo_passo}
+`).join('\n')}
+
+## SUA TAREFA
+Com base exclusivamente nos dados acima, gere uma Diretiva Executiva em português brasileiro com exatamente estas 5 seções. Seja específico, cite nomes de leads e produtos reais. Máximo de 3 frases por seção.
+
+**PONTOS FORTES IDENTIFICADOS**
+[O que este vendedor demonstra fazer bem com base nas conversas e dados — cite evidências concretas dos leads acima]
+
+**GAPS CRÍTICOS E OPORTUNIDADES PERDIDAS**
+[O que o vendedor deixou de explorar, produtos que poderiam ter sido ofertados, objeções que não foram tratadas, leads que esfriaram por falta de follow-up — seja direto e implacável]
+
+**PRODUTOS QUE DEVERIAM TER SIDO OFERTADOS**
+[Com base nos interesses demonstrados pelos leads, quais produtos complementares ou alternativos o vendedor deveria ter apresentado mas não apresentou — seja específico]
+
+**PLANO DE AÇÃO PARA OS PRÓXIMOS 7 DIAS**
+[3 ações concretas e prioritárias que este vendedor deve executar imediatamente para maximizar conversão — com prazo e lead específico quando aplicável]
+
+**POTENCIAL DE RECEITA ESTIMADO**
+[Com base nas probabilidades e urgências dos leads ativos, estime o potencial de fechamento deste vendedor nos próximos 30 dias — seja conservador e realista]
+
+Escreva em tom executivo, direto, sem rodeios. Cada palavra deve ter peso. Este relatório será lido pela diretoria.`;
+
+  return prompt;
+};
 
