@@ -14,6 +14,7 @@ const normalizeStrict = (value = '') =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\s]/g, '')
     .trim();
 
 function DashboardVendedor() {
