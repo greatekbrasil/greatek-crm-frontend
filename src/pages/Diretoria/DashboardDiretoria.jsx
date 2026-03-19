@@ -34,11 +34,12 @@ function DashboardDiretoria() {
         const allLeads = await getLeads();
         const normalizedLeads = Array.isArray(allLeads) ? allLeads.map(normalizeLead) : [];
 
-        // Cálculo de Performance Real por Vendedor
-        const vendors = ['Rodrigo Santos', 'Lucas Santos', 'Lucas Teixeira', 'Paula Rosa', 'Carlos Silva', 'Vitória Abreu', 'Rafael Morais'];
+        // Performance de TODAS as instâncias registradas no helpers.js
+        const vendors = Object.keys(vendorRegions);
         const performance = vendors.map((name, idx) => {
           const leadCount = normalizedLeads.filter(l => 
-            l.instancia_vendedor?.toLowerCase().includes(name.toLowerCase().split(' ')[0])
+            l.instancia_vendedor?.toLowerCase().includes(name.toLowerCase().split(' ')[0]) ||
+            l.instancia_vendedor?.toLowerCase().replace(/_/g, ' ') === name.toLowerCase()
           ).length;
           
           // Busca de Região no helpers.js (com normalização para acentos)

@@ -23,9 +23,21 @@ export default function VendedoresManagementPage() {
         setLoading(true);
         const allLeads = await getLeads();
         
-        // Agrupar por instancia_vendedor para identificar vendedores reais
+        // Inicializar o mapa com TODOS os vendedores registrados no helpers.js
         const vendorsMap = {};
+        Object.keys(vendorRegions).forEach(vName => {
+          const vId = vName.toLowerCase().replace(/\s+/g, '_');
+          vendorsMap[vId] = {
+            id: vId,
+            name: vName,
+            leadsCurated: 0,
+            activeLeads: 0,
+            status: 'Conectado', // Status visual inicial
+            region: vendorRegions[vName].join(', ')
+          };
+        });
         
+        // Atribuir dados dos leads aos vendedores existentes ou criar novos se não estiverem no helpers
         allLeads.forEach(lead => {
           const vId = lead.instancia_vendedor;
           if (!vId) return;
@@ -36,7 +48,8 @@ export default function VendedoresManagementPage() {
               name: vId.split(/[_.]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
               leadsCurated: 0,
               activeLeads: 0,
-              status: 'Ativo' // Por padrão, se tem leads recentes está ativo
+              status: 'Ativo',
+              region: 'Não definida'
             };
           }
           
@@ -46,12 +59,16 @@ export default function VendedoresManagementPage() {
             vendorsMap[vId].activeLeads += 1;
           }
 
-          // Atribuição de Região baseada no helpers.js (Robusto com acentos)
-          const normalizedVid = vId.toLowerCase().replace(/_/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-          const matchingKey = Object.keys(vendorRegions).find(k => 
-            k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedVid
-          );
-          vendorsMap[vId].region = matchingKey ? vendorRegions[matchingKey].join(', ') : 'Não definida';
+          // Se a região ainda não foi definida (vendedor novo que não estava no helpers), tentar normalizar
+          if (vendorsMap[vId].region === 'Não definida') {
+              const normalizedVid = vId.toLowerCase().replace(/_/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              const matchingKey = Object.keys(vendorRegions).find(k => 
+                k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedVid
+              );
+              if (matchingKey) {
+                vendorsMap[vId].region = vendorRegions[matchingKey].join(', ');
+              }
+          }
         });
 
         const sortedTeam = Object.values(vendorsMap).sort((a, b) => b.leadsCurated - a.leadsCurated);
