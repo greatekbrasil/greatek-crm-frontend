@@ -185,7 +185,8 @@ function DynamicExecutiveDirective({ vendedorData, leads }) {
     if (!vendedorData || !leads || leads.length === 0) return;
 
     const fetchDiretiva = async () => {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      // Tentar as variações de nome de variável (VITE_GEMINI_KEY ou VITE_GEMINI_API_KEY)
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY;
       
       if (!apiKey || apiKey === 'sua_chave_aqui' || apiKey.length < 10) {
         setDiretiva('Configuração Pendente: A chave de API do Gemini não foi encontrada ou é inválida. Certifique-se de configurar a variável VITE_GEMINI_API_KEY no Railway.');
@@ -198,7 +199,7 @@ function DynamicExecutiveDirective({ vendedorData, leads }) {
         const prompt = gerarDiretivaExecutiva(vendedorData, leads);
 
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: {
