@@ -37,10 +37,14 @@ function DashboardDiretoria() {
         // Performance de TODAS as instâncias registradas no helpers.js
         const vendors = Object.keys(vendorRegions);
         const performance = vendors.map((name, idx) => {
-          const leadCount = normalizedLeads.filter(l => 
-            l.instancia_vendedor?.toLowerCase().includes(name.toLowerCase().split(' ')[0]) ||
-            l.instancia_vendedor?.toLowerCase().replace(/_/g, ' ') === name.toLowerCase()
-          ).length;
+          // Normalização robusta para match (ex: Vitória Abreu -> vitoria)
+          const normNameSearch = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(' ')[0];
+          const normFullName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
+
+          const leadCount = normalizedLeads.filter(l => {
+            const vId = (l.instancia_vendedor || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return vId.includes(normNameSearch) || vId === normFullName;
+          }).length;
           
           // Busca de Região no helpers.js (com normalização para acentos)
           const normName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');

@@ -26,26 +26,34 @@ export default function VendedoresManagementPage() {
         // Inicializar o mapa com TODOS os vendedores registrados no helpers.js
         const vendorsMap = {};
         Object.keys(vendorRegions).forEach(vName => {
-          const vId = vName.toLowerCase().replace(/\s+/g, '_');
+          // Normalizar para remover acentos e espaços (ex: Vitória Abreu -> vitoria_abreu)
+          const vId = vName.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '_');
+            
           vendorsMap[vId] = {
             id: vId,
             name: vName,
             leadsCurated: 0,
             activeLeads: 0,
-            status: 'Conectado', // Status visual inicial
+            status: 'Conectado',
             region: vendorRegions[vName].join(', ')
           };
         });
         
-        // Atribuir dados dos leads aos vendedores existentes ou criar novos se não estiverem no helpers
+        // Atribuir dados dos leads aos vendedores existentes ou criar novos
         allLeads.forEach(lead => {
-          const vId = lead.instancia_vendedor;
-          if (!vId) return;
+          const vIdRaw = lead.instancia_vendedor;
+          if (!vIdRaw) return;
+          
+          // Garantir que o ID vindo do banco também esteja normalizado para o match
+          const vId = vIdRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           
           if (!vendorsMap[vId]) {
             vendorsMap[vId] = {
               id: vId,
-              name: vId.split(/[_.]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+              name: vIdRaw.split(/[_.]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
               leadsCurated: 0,
               activeLeads: 0,
               status: 'Ativo',
