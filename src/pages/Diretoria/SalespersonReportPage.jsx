@@ -5,6 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getLeads } from '../../api/leads';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import LeadCard from '../../components/LeadCard/LeadCard';
+import { normalizeLeads } from '../../utils/normalization';
 
 export default function SalespersonReportPage() {
   const { vendedorId } = useParams();
@@ -19,10 +20,10 @@ export default function SalespersonReportPage() {
         const allLeads = await getLeads();
         
         // Filtro Real por Instância (Vendedor)
-        const myLeads = allLeads.filter(l => 
+        const myLeads = normalizeLeads(allLeads.filter(l => 
           l.instancia_vendedor?.toLowerCase().includes(vendedorId.toLowerCase()) || 
           vendedorId === 'rodrigo_santos' // Fallback para dev se necessário
-        );
+        ));
 
         // Separação por período (Simulando com dados atuais já que não temos timestamp detalhado em todos)
         const leadsHoje = myLeads.slice(0, Math.ceil(myLeads.length * 0.2));
@@ -85,9 +86,9 @@ export default function SalespersonReportPage() {
             color: 'white', 
             boxShadow: 3 
           }}>
-            <Typography variant="h6" fontWeight="700" sx={{ mb: 1 }}>Leads Ativos</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{vendedorData?.kpis.leadsTratados}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1 }}>TEXTO 100% BRANCO</Typography>
+            <Typography variant="h6" fontWeight="700" sx={{ mb: 1, color: 'white' }}>Leads Ativos</Typography>
+            <Typography variant="h2" fontWeight="800" sx={{ mt: 1, color: 'white' }}>{vendedorData?.kpis.leadsTratados}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1, color: 'white', opacity: 0.8 }}>Relatório em tempo real</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} md={4}>
@@ -99,9 +100,9 @@ export default function SalespersonReportPage() {
             color: 'white', 
             boxShadow: 3 
           }}>
-            <Typography variant="h6" fontWeight="700" sx={{ mb: 1 }}>Taxa de Conversão</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{vendedorData?.kpis.conversao}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1 }}>TEXTO 100% BRANCO</Typography>
+            <Typography variant="h6" fontWeight="700" sx={{ mb: 1, color: 'white' }}>Taxa de Conversão</Typography>
+            <Typography variant="h2" fontWeight="800" sx={{ mt: 1, color: 'white' }}>{vendedorData?.kpis.conversao}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1, color: 'white', opacity: 0.8 }}>Média de fechamento</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} md={4}>
@@ -115,8 +116,8 @@ export default function SalespersonReportPage() {
             color: theme.palette.greatek.darkBlue 
           }}>
             <Typography variant="h6" fontWeight="700" sx={{ mb: 1 }}>Ticket Médio</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{vendedorData?.kpis.ticketMedio}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1, color: theme.palette.secondary.main }}>AZUL ESCURO GREATEK</Typography>
+            <Typography variant="h2" fontWeight="800" sx={{ mt: 1, color: theme.palette.greatek.darkBlue }}>{vendedorData?.kpis.ticketMedio}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mt: 1, color: theme.palette.greatek.darkBlue, opacity: 0.7 }}>Valor médio por venda</Typography>
           </Paper>
         </Grid>
       </Grid>
