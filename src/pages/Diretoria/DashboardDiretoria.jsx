@@ -5,69 +5,21 @@ import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import LeadCard from '../../components/LeadCard/LeadCard';
 import { useNavigate } from 'react-router-dom';
 import { getLeads } from '../../api/leads';
-
-// Fake Data para Diretoria
-const mockDirectorData = {
-  totalLeads: 312,
-  conversionRate: '38%',
-  averageTicket: 'R$ 18.200',
-  performance: [
-    { id: 1, nome: 'Lucas Santos', leads: 45, won: 12, region: 'MG', status: 'Excelente' },
-    { id: 2, nome: 'Rodrigo Santos', leads: 78, won: 28, region: 'RJ, SP, ES', status: 'Excepcional' },
-    { id: 3, nome: 'Lucas Teixeira', leads: 62, won: 18, region: 'Sul', status: 'Bom' },
-    { id: 4, nome: 'Paula Rosa', leads: 54, won: 15, region: 'Nordeste', status: 'Bom' },
-    { id: 5, nome: 'Carlos Silva', leads: 41, won: 11, region: 'Norte e CO', status: 'Bom' },
-    { id: 6, nome: 'Vitória Abreu', leads: 15, won: 8, region: 'SkyWatch (Geral)', status: 'Excelente' },
-    { id: 7, nome: 'Rafael Morais', leads: 17, won: 4, region: 'MG', status: 'Atenção' },
-  ],
-  todasOportunidades: [
-    {
-      id: 11,
-      nome_empresa: 'Tech Group Nordeste',
-      telefone: '81999999999',
-      urgencia: 'alta',
-      probabilidade: true,
-      instancia_vendedor: 'paula_rosa',
-      resumo: 'Lead com urgência para expansão de rede corporativa. Budget pré-aprovado pela matriz.'
-    },
-    {
-      id: 12,
-      nome_empresa: 'Varejo Bom Preço',
-      telefone: '11888888888',
-      urgencia: 'media',
-      probabilidade: false,
-      instancia_vendedor: 'lucas_santos',
-      resumo: 'Interesse em rede Wi-Fi corporativa para 5 lojas. Estão avaliando orçamentos concorrentes.'
-    },
-    {
-      id: 13,
-      nome_empresa: 'Provedor Amazônia Link',
-      telefone: '92977777777',
-      urgencia: 'alta',
-      probabilidade: true,
-      instancia_vendedor: 'carlos_silva',
-      resumo: 'Provedor busca lote de 500 roteadores OLT. Necessita de pronta entrega para novo loteamento.'
-    },
-    {
-      id: 14,
-      nome_empresa: 'Condomínio Sky Hub',
-      telefone: '21966666666',
-      urgencia: 'alta',
-      probabilidade: true,
-      instancia_vendedor: 'vitoria_abreu',
-      resumo: 'Síndico altamente interessado no SkyWatch para substituir o CFTV antigo do condomínio luxo.'
-    }
-  ]
-};
+import { normalizeLead } from '../../utils/normalization';
 
 function DashboardDiretoria() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [data, setData] = useState(mockDirectorData); // Começa com o Mock imediato para evitar crash
+  const [data, setData] = useState({
+    totalLeads: 0,
+    conversionRate: '0%',
+    averageTicket: 'R$ 0',
+    performance: [],
+    todasOportunidades: []
+  });
   const [loadingLeads, setLoadingLeads] = useState(true);
 
   const handleVendedorClick = (vendedorName) => {
-    // Transforma "Rodrigo Santos" em "rodrigo_santos" para a URL
     const id = vendedorName.toLowerCase().replace(/\s+/g, '_');
     navigate(`/diretoria/vendedor/${id}`);
   };
@@ -79,14 +31,34 @@ function DashboardDiretoria() {
       try {
         console.log('Diretoria: Puxando todos os leads do servidor...');
         const allLeads = await getLeads();
+        const normalizedLeads = Array.isArray(allLeads) ? allLeads.map(normalizeLead) : [];
 
-        setData(prev => ({
-          ...prev, 
-          totalLeads: Array.isArray(allLeads) ? allLeads.length : prev.totalLeads,
-          todasOportunidades: Array.isArray(allLeads) ? allLeads : []
-        }));
+        // Cálculo de Performance Real por Vendedor
+        const vendors = ['Rodrigo Santos', 'Lucas Santos', 'Lucas Teixeira', 'Paula Rosa', 'Carlos Silva', 'Vitória Abreu', 'Rafael Morais'];
+        const performance = vendors.map((name, idx) => {
+          const leadCount = normalizedLeads.filter(l => 
+            l.instancia_vendedor?.toLowerCase().includes(name.toLowerCase().split(' ')[0])
+          ).length;
+          
+          return {
+            id: idx + 1,
+            nome: name,
+            leads: leadCount,
+            won: 0, // Ganhos reais precisariam de um status 'Fechado' no banco
+            region: 'Não definida',
+            status: leadCount > 5 ? 'Ativo' : 'Iniciando'
+          };
+        });
+
+        setData({
+          totalLeads: normalizedLeads.length,
+          conversionRate: 'Aguardando dados...',
+          averageTicket: 'R$ ---',
+          performance: performance,
+          todasOportunidades: normalizedLeads
+        });
       } catch (err) {
-        console.error('Falha na API da Diretoria. Usando Mock:', err);
+        console.error('Falha na API da Diretoria:', err);
       } finally {
         setLoadingLeads(false);
       }
@@ -97,9 +69,6 @@ function DashboardDiretoria() {
 
     return () => clearInterval(intervalId);
   }, []);
-
-  // Removido o block de (!data) pois agora inicializamos com mock.
-  // if (!data) return <LoadingSpinner message="Consolidando dados de todos os vendedores..." />;
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
@@ -133,26 +102,24 @@ function DashboardDiretoria() {
                Resumo Estratégico do Time
             </Typography>
             <Typography variant="body1" sx={{ opacity: 0.9, lineHeight: 1.6 }}>
-              O time atingiu 82% da meta trimestral. Observamos um aumento significativo de interesse em soluções de SkyWatch no Sudeste, 
-              porém com gaps de follow-up no segundo dia de contato. Recomenda-se reforçar o estoque de OLTs para suprir a demanda de Minas Gerais.
+              Aguardando volume de conversas suficiente para análise macro da diretoria. 
+              O sistema está monitorando {data.totalLeads} leads em tempo real.
             </Typography>
           </Grid>
           <Grid item xs={12} md={5}>
             <Box sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Typography variant="subtitle2" sx={{ opacity: 0.7, mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.75rem' }}>Top 5 Insights Estratégicos (Semana)</Typography>
+              <Typography variant="subtitle2" sx={{ opacity: 0.7, mb: 1, textTransform: 'uppercase', letterSpacing: 1, fontSize: '0.75rem' }}>Insights Estratégicos (Aguardando IA)</Typography>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.85rem', lineHeight: '1.6' }}>
-                <li>ISPs de pequeno porte estão migrando para Wi-Fi 6 em massa.</li>
-                <li>Prazos de entrega acima de 48h estão causando 30% das perdas.</li>
-                <li>Leads qualificados via WhatsApp têm ticket 15% superior.</li>
-                <li>Região Nordeste apresenta maior gap de resposta média (+4h).</li>
-                <li>Novos cabos de fibra Greatek reduziram objeção de preço em 12%.</li>
+                <li>Análise de tendências de mercado baseada em leads recentes.</li>
+                <li>Identificação de gaps de atendimento por região.</li>
+                <li>Mapeamento de produtos com maior tração semanal.</li>
               </ul>
             </Box>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* KPIs Gerais (Refatorados para 100% de largura e maior destaque) */}
+      {/* KPIs Gerais */}
       <Grid container spacing={3} sx={{ mb: 5 }}>
         <Grid item xs={12} md={4}>
           <Paper sx={{ 
@@ -179,7 +146,7 @@ function DashboardDiretoria() {
             color: 'white' 
           }}>
             <Typography variant="h6" fontWeight="400" sx={{ opacity: 0.8 }}>Taxa de Conversão</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{data.conversionRate}</Typography>
+            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>---</Typography>
             <Typography variant="caption" sx={{ opacity: 0.6 }}>MÉDIA DE FECHAMENTO DIRETO</Typography>
           </Paper>
         </Grid>
@@ -194,7 +161,7 @@ function DashboardDiretoria() {
             color: '#083561' 
           }}>
             <Typography variant="h6" fontWeight="400" sx={{ opacity: 0.8 }}>Ticket Médio (Estimado)</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{data.averageTicket}</Typography>
+            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>R$ ---</Typography>
             <Typography variant="caption" sx={{ color: 'secondary.main', fontWeight: 'bold' }}>PROJEÇÃO DE FATURAMENTO IA</Typography>
           </Paper>
         </Grid>

@@ -6,47 +6,15 @@ import LeadCard from '../../components/LeadCard/LeadCard';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import { getVendorStates } from '../../utils/helpers';
 import { getLeads } from '../../api/leads';
+import { normalizeLead } from '../../utils/normalization';
 
-// Fake Data plana baseada no Banco de Dados Postgres (Lead Analisado)
-const mockLeadsData = [
-  {
-    id: 1,
-    nome_empresa: 'Tech Solutions SA',
-    telefone: '11999999999',
-    urgencia: 'alta',
-    probabilidade: true,
-    instancia_vendedor: 'rodrigo_santos',
-    resumo: 'Cliente precisa migrar infraestrutura urgentemente após falha no data center atual.'
-  },
-  {
-    id: 2,
-    nome_empresa: 'Varejo Bom Preço',
-    telefone: '11888888888',
-    urgencia: 'media',
-    probabilidade: false,
-    instancia_vendedor: 'lucas_santos',
-    resumo: 'Interesse em rede Wi-Fi corporativa para 5 lojas. Estão avaliando orçamentos.'
-  },
-  {
-    id: 3,
-    nome_empresa: 'Provedor NetLink ISP',
-    telefone: '11777777777',
-    urgencia: 'baixa',
-    probabilidade: false,
-    instancia_vendedor: 'carlos_silva',
-    resumo: 'Provedor busca novos roteadores, mas fechamento previsto só para o próximo semestre.'
-  }
-];
-
-// Função para normalizar textos como:
-// "Rodrigo Santos" -> "rodrigosantos"
-// "rodrigo_santos" -> "rodrigosantos"
+// Função para normalizar textos para comparação (Ignora acentos, espaços e underscores)
 const normalizeText = (value = '') =>
   value
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove acentos
-    .replace(/[_\s]/g, '')           // remove espaços e underscores
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_\s]/g, '')
     .trim();
 
 function DashboardVendedor() {
@@ -59,31 +27,32 @@ function DashboardVendedor() {
 
     const fetchRealLeads = async () => {
       try {
-        console.log('Fetching EXCLUSIVE real-time leads from Railway API...');
+        console.log('Fetching live leads for:', user?.name);
         const allLeads = await getLeads();
-
-        const myLeads = allLeads.filter((l) => {
+        console.log('Total leads from API:', allLeads.length);
+        
+        const myLeads = allLeads.filter(l => {
           if (!l.instancia_vendedor) return false;
-
+          
           const inst = normalizeText(l.instancia_vendedor);
           const name = normalizeText(user?.name || '');
           const emailPrefix = normalizeText(user?.email?.split('@')[0] || '');
-
-          return (
-            (name && (inst.includes(name) || name.includes(inst))) ||
-            (emailPrefix && inst.includes(emailPrefix)) ||
-            inst === 'teste'
-          );
+          
+          const match = inst.includes(name) || inst.includes(emailPrefix) || name.includes(inst) || inst === 'teste';
+          
+          if (!match) {
+            console.log(`Lead ${l.nome_lead} filtered out. Instance: ${inst}, User: ${name}/${emailPrefix}`);
+          }
+          
+          return match;
         });
 
-        setLeads(myLeads);
+        // Normalização Oficial Greatek V3
+        const normalizedLeads = myLeads.map(normalizeLead);
+        setLeads(normalizedLeads);
       } catch (err) {
-        console.error('Erro na API real, puxando mock de fallback:', err);
-        const fallbackLeads = mockLeadsData.map((l) => ({
-          ...l,
-          instancia_vendedor: user?.name
-        }));
-        setLeads(fallbackLeads);
+        console.error('Erro ao buscar leads da API:', err);
+        setLeads([]);
       } finally {
         setLoading(false);
       }
@@ -98,6 +67,11 @@ function DashboardVendedor() {
   if (loading) return <LoadingSpinner message="Sincronizando Leads (N8N)..." />;
 
   const myStates = getVendorStates(user?.name);
+  
+  // Cálculo de KPIs Reais (Baseado na Normalização V3)
+  const totalLeads = leads.length;
+  const emNegociacao = leads.filter(l => l.probabilidade_percent > 50).length;
+  const conversaoEstimada = totalLeads > 0 ? Math.round((emNegociacao / totalLeads) * 100) : 0;
 
   return (
     <Box>
@@ -111,68 +85,36 @@ function DashboardVendedor() {
       </Box>
 
       <Grid container spacing={4}>
+        {/* Painel Esquerdo: KPIs e Mapa */}
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, mb: 4, borderRadius: 3, boxShadow: 2 }}>
-            <Typography variant="h6" gutterBottom color="primary">
-              Resumo Diário
-            </Typography>
+            <Typography variant="h6" gutterBottom color="primary">Resumo Diário</Typography>
             <Divider sx={{ mb: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography color="text.secondary">Leads Recebidos</Typography>
-              <Typography fontWeight="bold">12</Typography>
+              <Typography fontWeight="bold">{totalLeads}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography color="text.secondary">Em Negociação</Typography>
-              <Typography fontWeight="bold" color="secondary.main">
-                {leads.length}
-              </Typography>
+              <Typography color="text.secondary">Alta Probabilidade</Typography>
+              <Typography fontWeight="bold" color="secondary.main">{emNegociacao}</Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography color="text.secondary">Conversão IA</Typography>
-              <Typography fontWeight="bold" color="success.main">
-                28%
-              </Typography>
+              <Typography color="text.secondary">Potencial de Conversão</Typography>
+              <Typography fontWeight="bold" color="success.main">{conversaoEstimada}%</Typography>
             </Box>
           </Paper>
 
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              boxShadow: 2,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
-            }}
-          >
+          <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <AnimatedGlobe highlightStates={myStates} />
           </Paper>
         </Grid>
 
+        {/* Painel Direito: Lista de Leads */}
         <Grid item xs={12} md={8}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              boxShadow: 2,
-              backgroundColor: 'background.default'
-            }}
-            elevation={0}
-          >
+          <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 2, backgroundColor: 'background.default' }} elevation={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" color="primary" fontWeight={700}>
-                Meus Leads Ativos
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  backgroundColor: 'greatek.darkBlue',
-                  color: 'white',
-                  py: 0.5,
-                  px: 2,
-                  borderRadius: 4
-                }}
-              >
+              <Typography variant="h6" color="primary" fontWeight={700}>Meus Leads Ativos</Typography>
+              <Typography variant="caption" sx={{ backgroundColor: 'greatek.darkBlue', color: 'white', py: 0.5, px: 2, borderRadius: 4 }}>
                 Sincronizado via N8N ao vivo
               </Typography>
             </Box>

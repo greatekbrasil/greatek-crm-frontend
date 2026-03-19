@@ -50,7 +50,7 @@ export default function AppRoutes() {
     {
       path: '/vendedor',
       element: (
-        <AuthGuard roles={['vendedor', 'salesman']}> {/* Apenas vendedores podem acessar */}
+        <AuthGuard roles={['vendedor', 'salesman', 'diretoria']}> {/* Vendedores e Diretoria podem acessar */}
           <MainLayout />
         </AuthGuard>
       ),

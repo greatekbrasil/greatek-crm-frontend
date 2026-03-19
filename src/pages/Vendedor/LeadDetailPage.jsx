@@ -5,6 +5,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddCommentIcon from '@mui/icons-material/AddComment';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import { getLeads } from '../../api/leads';
+import { normalizeLead } from '../../utils/normalization';
 
 function LeadDetailPage() {
   const { leadId } = useParams();
@@ -23,10 +24,9 @@ function LeadDetailPage() {
         const found = allLeads.find(l => String(l.id) === String(leadId));
 
         if (found) {
-          setLead({
-            ...found,
-            historico_ia: found.historico_ia || [] // O banco novo ainda não tem histórico salvo, prevenindo crash
-          });
+          // Normalização para o padrão do front-end
+          const normalized = normalizeLead(found);
+          setLead(normalized);
         } else {
           throw new Error("Lead não encontrado na API real");
         }
@@ -92,7 +92,7 @@ function LeadDetailPage() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
           <Box>
             <Typography variant="h4" fontWeight={700} color="greatek.darkBlue">
-              {lead.nome_empresa}
+              {lead.nome_exibicao}
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
               ID: #{lead.id} - Roteamento: {lead.instancia_vendedor}

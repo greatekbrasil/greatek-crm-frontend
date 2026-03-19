@@ -36,7 +36,7 @@ function LeadCard({ lead }) {
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6" component="div" sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
-            {lead.nome_empresa || lead.nome_lead || 'Empresa não informada'}
+            {lead.nome_exibicao}
           </Typography>
           {getUrgencyChip(lead.urgencia)}
         </Box>
