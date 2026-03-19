@@ -185,17 +185,24 @@ function DynamicExecutiveDirective({ vendedorData, leads }) {
     if (!vendedorData || !leads || leads.length === 0) return;
 
     const fetchDiretiva = async () => {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      
+      if (!apiKey || apiKey === 'sua_chave_aqui' || apiKey.length < 10) {
+        setDiretiva('Configuração Pendente: A chave de API do Gemini não foi encontrada ou é inválida. Certifique-se de configurar a variável VITE_GEMINI_API_KEY no Railway.');
+        setLoadingDiretiva(false);
+        return;
+      }
+
       setLoadingDiretiva(true);
       try {
         const prompt = gerarDiretivaExecutiva(vendedorData, leads);
 
         const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'X-goog-api-key': import.meta.env.VITE_GEMINI_API_KEY
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
@@ -204,12 +211,20 @@ function DynamicExecutiveDirective({ vendedorData, leads }) {
           }
         );
 
+        if (!response.ok) {
+           const errorData = await response.json();
+           throw new Error(errorData.error?.message || 'Erro na comunicação com a IA');
+        }
+
         const data = await response.json();
-        const texto = data.candidates[0].content.parts[0].text;
+        const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!texto) throw new Error('A IA não retornou um conteúdo válido.');
+        
         setDiretiva(texto);
       } catch (err) {
         console.error('Erro ao gerar diretiva:', err);
-        setDiretiva('Não foi possível gerar a análise no momento. Tente novamente em instantes.');
+        setDiretiva(`Falha na IA: ${err.message}. Verifique a cota e validade da chave VITE_GEMINI_API_KEY.`);
       } finally {
         setLoadingDiretiva(false);
       }
