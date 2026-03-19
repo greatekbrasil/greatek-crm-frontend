@@ -131,9 +131,9 @@ function DashboardDiretoria() {
             color: 'white',
             border: '1px solid rgba(255,255,255,0.1)'
           }}>
-            <Typography variant="h6" fontWeight="400" sx={{ opacity: 0.8 }}>Leads Ativos (Global)</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>{data.totalLeads}</Typography>
-            <Typography variant="caption" sx={{ opacity: 0.6 }}>VOLUME TOTAL EM CURADORIA IA</Typography>
+            <Typography variant="h6" fontWeight="700" color="white" sx={{ mb: 1 }}>Leads Ativos (Global)</Typography>
+            <Typography variant="h2" fontWeight="800" color="white" sx={{ mt: 1 }}>{data.totalLeads}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'white' }}>VOLUME TOTAL EM CURADORIA IA</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} md={4}>
@@ -145,9 +145,9 @@ function DashboardDiretoria() {
             backgroundColor: 'success.main', 
             color: 'white' 
           }}>
-            <Typography variant="h6" fontWeight="400" sx={{ opacity: 0.8 }}>Taxa de Conversão</Typography>
-            <Typography variant="h2" fontWeight="800" sx={{ mt: 1 }}>---</Typography>
-            <Typography variant="caption" sx={{ opacity: 0.6 }}>MÉDIA DE FECHAMENTO DIRETO</Typography>
+            <Typography variant="h6" fontWeight="700" color="white" sx={{ mb: 1 }}>Taxa de Conversão</Typography>
+            <Typography variant="h2" fontWeight="800" color="white" sx={{ mt: 1 }}>---</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'white' }}>MÉDIA DE FECHAMENTO DIRETO</Typography>
           </Paper>
         </Grid>
         <Grid item xs={12} md={4}>
