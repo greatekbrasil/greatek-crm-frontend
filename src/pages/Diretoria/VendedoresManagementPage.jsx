@@ -46,9 +46,11 @@ export default function VendedoresManagementPage() {
             vendorsMap[vId].activeLeads += 1;
           }
 
-          // Atribuição de Região baseada no helpers.js
-          const normalizedVid = vId.toLowerCase().replace(/_/g, ' ');
-          const matchingKey = Object.keys(vendorRegions).find(k => k.toLowerCase() === normalizedVid);
+          // Atribuição de Região baseada no helpers.js (Robusto com acentos)
+          const normalizedVid = vId.toLowerCase().replace(/_/g, ' ').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const matchingKey = Object.keys(vendorRegions).find(k => 
+            k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedVid
+          );
           vendorsMap[vId].region = matchingKey ? vendorRegions[matchingKey].join(', ') : 'Não definida';
         });
 

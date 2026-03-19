@@ -4,8 +4,9 @@ import { useAuth } from '../../hooks/useAuth';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import LeadCard from '../../components/LeadCard/LeadCard';
 import { useNavigate } from 'react-router-dom';
-import { getLeads } from '../../api/leads';
+import { getLeads, getDirectorDashboardData } from '../../api/leads';
 import { normalizeLead } from '../../utils/normalization';
+import { vendorRegions } from '../../utils/helpers';
 
 function DashboardDiretoria() {
   const navigate = useNavigate();
@@ -40,12 +41,19 @@ function DashboardDiretoria() {
             l.instancia_vendedor?.toLowerCase().includes(name.toLowerCase().split(' ')[0])
           ).length;
           
+          // Busca de Região no helpers.js (com normalização para acentos)
+          const normName = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const matchingKey = Object.keys(vendorRegions).find(k => 
+            k.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normName
+          );
+          const region = matchingKey ? vendorRegions[matchingKey].join(', ') : 'Não definida';
+
           return {
             id: idx + 1,
             nome: name,
             leads: leadCount,
             won: 0, // Ganhos reais precisariam de um status 'Fechado' no banco
-            region: 'Não definida',
+            region: region,
             status: leadCount > 5 ? 'Ativo' : 'Iniciando'
           };
         });
