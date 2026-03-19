@@ -40,6 +40,7 @@ export const normalizeLead = (lead) => {
     
     // Textos Longos
     resumo: s(lead.resumo_ia, 'Sem resumo disponível.'),
+    produto_solicitado: s(lead.produto_solicitado, 'Não especificado'),
     produto_ofertado: s(lead.interesse_lead, 'Não identificado'),
     objecoes: s(lead.objecoes, 'Nenhuma identificada'),
     proximo_passo: s(lead.proximo_passo, 'Aguardando ação do vendedor'),

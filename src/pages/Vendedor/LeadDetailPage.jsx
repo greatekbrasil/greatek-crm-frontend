@@ -7,7 +7,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
-import { getLeads, updateLead } from '../../api/leads';
+import { getLeads, getLeadDetails, updateLead } from '../../api/leads';
 import { normalizeLead } from '../../utils/normalization';
 import { KNOWLEDGE_BASE_PRODUCTS } from '../../data/knowledgeBase';
 
@@ -27,11 +27,10 @@ function LeadDetailPage() {
 
   const fetchSingleLead = async () => {
     try {
-      const allLeads = await getLeads();
-      const found = allLeads.find(l => String(l.id) === String(leadId));
+      const data = await getLeadDetails(leadId);
 
-      if (found) {
-        const normalized = normalizeLead(found);
+      if (data) {
+        const normalized = normalizeLead(data);
         setLead(normalized);
         setEditedLead(normalized);
       } else {
