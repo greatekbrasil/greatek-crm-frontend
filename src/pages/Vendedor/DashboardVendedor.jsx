@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Paper, Divider } from '@mui/material';
+import { Box, Typography, Grid, Paper, Divider, Chip } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 import AnimatedGlobe from '../../components/BrazilMap/AnimatedGlobe';
 import LeadCard from '../../components/LeadCard/LeadCard';
