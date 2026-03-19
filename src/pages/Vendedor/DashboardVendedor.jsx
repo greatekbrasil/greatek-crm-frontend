@@ -55,7 +55,9 @@ function DashboardVendedor() {
       await deleteLead(id);
       setLeads(prev => prev.filter(l => l.id !== id));
     } catch (err) {
-      alert('Erro ao excluir o lead. Tente novamente.');
+      console.error('Erro detalhado ao excluir lead:', err.response || err);
+      const msg = err.response?.data?.message || 'Erro ao excluir o lead. Tente novamente.';
+      alert(msg);
     }
   };
 
