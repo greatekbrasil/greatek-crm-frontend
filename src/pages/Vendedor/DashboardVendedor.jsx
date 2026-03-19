@@ -51,13 +51,20 @@ function DashboardVendedor() {
   }, [user]);
 
   const handleDeleteLead = async (id) => {
+    console.log('Tentando excluir lead com ID:', id);
+    console.log('IDs dos leads atuais:', leads.map(l => l.id));
+    
     try {
-      await deleteLead(id);
-      setLeads(prev => prev.filter(l => l.id !== id));
+      const resp = await deleteLead(id);
+      console.log('Resposta do servidor ao deletar:', resp);
+      
+      // Filtro robusto (comparando como string para evitar problemas de tipo)
+      setLeads(prev => prev.filter(l => String(l.id) !== String(id)));
     } catch (err) {
-      console.error('Erro detalhado ao excluir lead:', err.response || err);
-      const msg = err.response?.data?.message || 'Erro ao excluir o lead. Tente novamente.';
-      alert(msg);
+      console.error('Erro detalhado ao excluir lead:', err);
+      const statusCode = err.response?.status;
+      const serverMsg = err.response?.data?.message || 'Sem mensagem do servidor';
+      alert(`Erro ${statusCode || 'de rede'}: ${serverMsg}\n\nO lead não foi excluído.`);
     }
   };
 
