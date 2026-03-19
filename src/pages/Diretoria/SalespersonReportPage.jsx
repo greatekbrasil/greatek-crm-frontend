@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Grid, Paper, Divider, Button, Card, CardContent, Chip, List, ListItem, ListItemText, useTheme } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getLeads } from '../../api/leads';
+import { getLeads, deleteLead } from '../../api/leads';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import LeadCard from '../../components/LeadCard/LeadCard';
 import { normalizeLeads } from '../../utils/normalization';
@@ -14,45 +14,58 @@ export default function SalespersonReportPage() {
   const [loading, setLoading] = useState(true);
   const [vendedorData, setVendedorData] = useState(null);
 
+  const fetchReport = async () => {
+    try {
+      const allLeads = await getLeads();
+      
+      // Filtro Real por Instância (Vendedor)
+      const rawLeads = allLeads.filter(l => 
+        l.instancia_vendedor?.toLowerCase().includes(vendedorId.toLowerCase()) || 
+        vendedorId === 'rodrigo_santos'
+      );
+
+      const myLeads = normalizeLeads(rawLeads);
+
+      // Separação por período
+      const leadsHoje = myLeads.slice(0, Math.ceil(myLeads.length * 0.2));
+      const leadsSemana = myLeads.slice(0, Math.ceil(myLeads.length * 0.6));
+
+      setVendedorData({
+        name: vendedorId.split(/[_.]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        id: vendedorId,
+        leads: myLeads,
+        stats: {
+          hoje: leadsHoje.length,
+          semana: leadsSemana.length,
+          mes: myLeads.length
+        },
+        kpis: {
+          conversao: myLeads.length > 0 ? `${Math.round((myLeads.filter(l => l.probabilidade).length / myLeads.length) * 100)}%` : '0%',
+          leadsTratados: myLeads.length,
+          ticketMedio: 'R$ ---'
+        }
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const allLeads = await getLeads();
-        
-        // Filtro Real por Instância (Vendedor)
-        const myLeads = normalizeLeads(allLeads.filter(l => 
-          l.instancia_vendedor?.toLowerCase().includes(vendedorId.toLowerCase()) || 
-          vendedorId === 'rodrigo_santos' // Fallback para dev se necessário
-        ));
-
-        // Separação por período (Simulando com dados atuais já que não temos timestamp detalhado em todos)
-        const leadsHoje = myLeads.slice(0, Math.ceil(myLeads.length * 0.2));
-        const leadsSemana = myLeads.slice(0, Math.ceil(myLeads.length * 0.6));
-
-        setVendedorData({
-          name: vendedorId.split(/[_.]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-          id: vendedorId,
-          leads: myLeads,
-          stats: {
-            hoje: leadsHoje.length,
-            semana: leadsSemana.length,
-            mes: myLeads.length
-          },
-          kpis: {
-            conversao: myLeads.length > 0 ? `${Math.round((myLeads.filter(l => l.probabilidade).length / myLeads.length) * 100)}%` : '0%',
-            leadsTratados: myLeads.length,
-            ticketMedio: 'R$ ---'
-          }
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReport();
   }, [vendedorId]);
+
+  const handleDeleteLead = async (id) => {
+      try {
+          await deleteLead(id);
+          // Recarrega os dados para atualizar os KPIs e a lista
+          fetchReport();
+      } catch (err) {
+          console.error('Erro ao deletar lead:', err);
+          alert('Não foi possível excluir o lead.');
+      }
+  };
 
   if (loading) return <LoadingSpinner message="Consolidando Inteligência Real EvolutionAPI..." />;
 
@@ -160,7 +173,7 @@ export default function SalespersonReportPage() {
       <Grid container spacing={3}>
         {vendedorData?.leads.map(lead => (
           <Grid item xs={12} md={6} lg={4} key={lead.id}>
-            <LeadCard lead={lead} />
+            <LeadCard lead={lead} onDelete={handleDeleteLead} />
           </Grid>
         ))}
         {vendedorData?.leads.length === 0 && (
