@@ -28,17 +28,34 @@ function LeadCard({ lead, onDelete }) {
   };
 
   const getUrgencyChip = (urgencia = 'baixa') => {
-    if (urgencia.toLowerCase() === 'alta') {
+    const u = urgencia.toLowerCase();
+    if (u === 'alta') {
       return (
         <Chip
-          label="URGENTE"
+          label="URGÊNCIA ALTA"
           color="error"
           size="small"
-          sx={{ backgroundColor: theme.palette.error.main, color: theme.palette.white, fontWeight: 700 }}
+          sx={{ fontWeight: 700 }}
         />
       );
     }
-    return null;
+    if (u === 'media' || u === 'média') {
+      return (
+        <Chip
+          label="URGÊNCIA MÉDIA"
+          color="warning"
+          size="small"
+          sx={{ fontWeight: 700 }}
+        />
+      );
+    }
+    return (
+      <Chip
+        label="URGÊNCIA BAIXA"
+        size="small"
+        sx={{ backgroundColor: '#0081cc', color: 'white', fontWeight: 700 }}
+      />
+    );
   };
 
   const isHighProbability = lead.probabilidade === true;

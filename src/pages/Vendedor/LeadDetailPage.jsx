@@ -138,8 +138,13 @@ function LeadDetailPage() {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Chip color="error" label={`Urgência: ${lead.urgencia?.toUpperCase()}`} />
-            <Chip color={lead.probabilidade ? "success" : "default"} label={lead.probabilidade ? "Alta Chance" : "Baixa Chance"} />
+            {(() => {
+              const u = lead.urgencia?.toLowerCase();
+              if (u === 'alta') return <Chip color="error" label="URGÊNCIA ALTA" sx={{ fontWeight: 700 }} />;
+              if (u === 'media' || u === 'média') return <Chip color="warning" label="URGÊNCIA MÉDIA" sx={{ fontWeight: 700 }} />;
+              return <Chip label="URGÊNCIA BAIXA" sx={{ backgroundColor: '#0081cc', color: 'white', fontWeight: 700 }} />;
+            })()}
+            <Chip color={lead.probabilidade ? "success" : "default"} label={lead.probabilidade ? "Alta Chance" : "Baixa Chance"} sx={{ fontWeight: 700 }} />
           </Box>
         </Box>
 
