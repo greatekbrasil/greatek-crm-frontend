@@ -7,36 +7,14 @@ import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import { getVendorStates } from '../../utils/helpers';
 import { getLeads } from '../../api/leads';
 
-// Fake Data plana baseada no Banco de Dados Postgres (Lead Analisado)
-const mockLeadsData = [
-  {
-    id: 1,
-    nome_empresa: 'Tech Solutions SA',
-    telefone: '11999999999',
-    urgencia: 'alta',
-    probabilidade: true,
-    instancia_vendedor: 'rodrigo_santos',
-    resumo: 'Cliente precisa migrar infraestrutura urgentemente após falha no data center atual.'
-  },
-  {
-    id: 2,
-    nome_empresa: 'Varejo Bom Preço',
-    telefone: '11888888888',
-    urgencia: 'media',
-    probabilidade: false,
-    instancia_vendedor: 'lucas_santos',
-    resumo: 'Interesse em rede Wi-Fi corporativa para 5 lojas. Estão avaliando orçamentos.'
-  },
-  {
-    id: 3,
-    nome_empresa: 'Provedor NetLink ISP',
-    telefone: '11777777777',
-    urgencia: 'baixa',
-    probabilidade: false,
-    instancia_vendedor: 'carlos_silva',
-    resumo: 'Provedor busca novos roteadores, mas fechamento previsto só para o próximo semestre.'
-  }
-];
+const myLeads = allLeads.filter(l => {
+  if (!l.instancia_vendedor) return false;
+  const inst = l.instancia_vendedor.toLowerCase().replace(/[_\s]/g, '');
+  const name = user?.name ? user.name.toLowerCase().replace(/[_\s]/g, '') : '';
+  const emailPrefix = user?.email ? user.email.split('@')[0].toLowerCase().replace(/[_\s]/g, '') : '';
+
+  return inst.includes(name) || inst.includes(emailPrefix) || name.includes(inst);
+});
 
 function DashboardVendedor() {
   const { user } = useAuth();
