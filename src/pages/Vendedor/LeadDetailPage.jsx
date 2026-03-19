@@ -1,63 +1,53 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Grid, Button, Divider, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Typography, Paper, Grid, Button, Divider, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddCommentIcon from '@mui/icons-material/AddComment';
+import EditIcon from '@mui/icons-material/Edit';
+import SaveIcon from '@mui/icons-material/Save';
+import CancelIcon from '@mui/icons-material/Cancel';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
-import { getLeads } from '../../api/leads';
+import { getLeads, updateLead } from '../../api/leads';
 import { normalizeLead } from '../../utils/normalization';
 
 function LeadDetailPage() {
   const { leadId } = useParams();
   const navigate = useNavigate();
   const [lead, setLead] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  // Estados do Modal
+  // Estados de Edição
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedLead, setEditedLead] = useState(null);
+
+  // Estados do Modal de Nota
   const [openModal, setOpenModal] = useState(false);
   const [newNote, setNewNote] = useState('');
 
-  useEffect(() => {
-    const fetchSingleLead = async () => {
-      try {
-        console.log(`Puxando dados detalhados do Lead ${leadId} do servidor...`);
-        const allLeads = await getLeads();
-        const found = allLeads.find(l => String(l.id) === String(leadId));
+  const fetchSingleLead = async () => {
+    try {
+      const allLeads = await getLeads();
+      const found = allLeads.find(l => String(l.id) === String(leadId));
 
-        if (found) {
-          // Normalização para o padrão do front-end
-          const normalized = normalizeLead(found);
-          setLead(normalized);
-        } else {
-          throw new Error("Lead não encontrado na API real");
-        }
-      } catch (err) {
-        console.error("Usando mock para LeadDetail pois a API falhou:", err);
-        // Mock fallback seguro
-        setLead({
-          id: leadId,
-          nome_empresa: 'Tech Solutions SA',
-          telefone: '11999999999',
-          email: 'contato@techsolutions.com',
-          origem: 'Campanha Meta Ads - B2B',
-          urgencia: 'alta',
-          probabilidade: true,
-          instancia_vendedor: 'rodrigo_santos',
-          resumo: 'O cliente entrou em contato buscando fornecedor com pronta entrega de cabos e roteadores. Orçamento já aprovado pela diretoria.',
-          produto_ofertado: 'Lote de 500 Roteadores e Cabos de Fibra',
-          objecoes: 'O cliente demonstrou receio com o prazo de entrega longo da transportadora para a região Norte.',
-          gaps: 'Vendedor esqueceu de oferecer garantia estendida e não qualificou bem a faixa de budget para os roteadores.',
-          historico_ia: [
-            { data: '2026-03-17 10:00', autor: 'IA Gemini', nota: 'A IA identificou um padrão de urgência pelo uso das palavras "imediatamente" e "orçamento aprovado".' },
-            { data: '2026-03-17 10:05', autor: 'Sistema', nota: 'Sugerida mensagem de WhatsApp do tipo: "Olá, vi que vocês têm urgência nos cabos. Consigo despachar hoje..."' }
-          ]
-        });
+      if (found) {
+        const normalized = normalizeLead(found);
+        setLead(normalized);
+        setEditedLead(normalized);
+      } else {
+        throw new Error("Lead não encontrado");
       }
-    };
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchSingleLead();
   }, [leadId]);
 
-  if (!lead) return <LoadingSpinner message="Decodificando análise da IA Gemini..." />;
+  if (loading || !lead) return <LoadingSpinner message="Sincronizando Dados com EvolutionAPI..." />;
 
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => {
@@ -67,10 +57,7 @@ function LeadDetailPage() {
 
   const handleSaveNote = () => {
     if (!newNote.trim()) return;
-    
-    // Na vida real, você faria um POST para sua API Node.js aqui
     const dateStr = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-    
     setLead(prev => ({
       ...prev,
       historico_ia: [
@@ -78,29 +65,81 @@ function LeadDetailPage() {
         { data: dateStr, autor: 'Vendedor', nota: newNote }
       ]
     }));
-    
     handleCloseModal();
+  };
+
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      setEditedLead(lead); // Reset
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditedLead(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveLead = async () => {
+    try {
+      setLoading(true);
+      await updateLead(leadId, editedLead);
+      setLead(editedLead);
+      setIsEditing(false);
+    } catch (err) {
+      alert('Erro ao salvar alterações no servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', p: 1 }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2 }}>
-        Voltar para o Dashboard
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
+          Voltar
+        </Button>
+        <Box>
+          {isEditing ? (
+            <>
+              <Button startIcon={<CancelIcon />} onClick={handleToggleEdit} color="inherit" sx={{ mr: 1 }}>
+                Cancelar
+              </Button>
+              <Button startIcon={<SaveIcon />} variant="contained" color="success" onClick={handleSaveLead}>
+                Salvar Alterações
+              </Button>
+            </>
+          ) : (
+            <Button startIcon={<EditIcon />} variant="outlined" color="primary" onClick={handleToggleEdit}>
+              Editar Informações
+            </Button>
+          )}
+        </Box>
+      </Box>
 
       <Paper sx={{ p: 4, borderRadius: 3, boxShadow: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Box>
-            <Typography variant="h4" fontWeight={700} color="greatek.darkBlue">
-              {lead.nome_exibicao}
-            </Typography>
+          <Box sx={{ flexGrow: 1, mr: 2 }}>
+            {isEditing ? (
+              <TextField 
+                fullWidth 
+                variant="standard" 
+                label="Nome do Lead" 
+                value={editedLead.nome_exibicao} 
+                onChange={(e) => handleInputChange('nome_exibicao', e.target.value)}
+                sx={{ mb: 1, '& .MuiInputBase-root': { fontSize: '2rem', fontWeight: 700 } }}
+              />
+            ) : (
+              <Typography variant="h4" fontWeight={700} color="greatek.darkBlue">
+                {lead.nome_exibicao}
+              </Typography>
+            )}
             <Typography variant="subtitle1" color="text.secondary">
               ID: #{lead.id} - Roteamento: {lead.instancia_vendedor}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Chip color="error" label={`Urgência: ${lead.urgencia?.toUpperCase()}`} />
-            <Chip color={lead.probabilidade ? "success" : "default"} label={lead.probabilidade ? "Alta Chance de Fechar" : "Baixa Probabilidade"} />
+            <Chip color={lead.probabilidade ? "success" : "default"} label={lead.probabilidade ? "Alta Chance" : "Baixa Chance"} />
           </Box>
         </Box>
 
@@ -111,9 +150,28 @@ function LeadDetailPage() {
           <Grid item xs={12} md={5}>
             <Typography variant="h6" color="primary" mb={2}>Detalhes de Contato</Typography>
             <Box sx={{ mb: 3, p: 2, backgroundColor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-                <Typography mb={1}><strong>Telefone:</strong> +{lead.telefone}</Typography>
-                <Typography mb={1}><strong>Email:</strong> {lead.email}</Typography>
-                <Typography><strong>Origem Lead:</strong> {lead.origem}</Typography>
+                {isEditing ? (
+                  <>
+                    <TextField 
+                      fullWidth label="Telefone" value={editedLead.telefone} 
+                      onChange={(e) => handleInputChange('telefone', e.target.value)} sx={{ mb: 2 }} 
+                    />
+                    <TextField 
+                      fullWidth label="Email" value={editedLead.email} 
+                      onChange={(e) => handleInputChange('email', e.target.value)} sx={{ mb: 2 }} 
+                    />
+                    <TextField 
+                      fullWidth label="Origem" value={editedLead.origem} 
+                      onChange={(e) => handleInputChange('origem', e.target.value)} 
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Typography mb={1}><strong>Telefone:</strong> +{lead.telefone}</Typography>
+                    <Typography mb={1}><strong>Email:</strong> {lead.email}</Typography>
+                    <Typography><strong>Origem Lead:</strong> {lead.origem}</Typography>
+                  </>
+                )}
             </Box>
 
             <Button 
@@ -124,40 +182,68 @@ function LeadDetailPage() {
                onClick={handleOpenModal}
                sx={{ mt: 2, py: 1.5, fontWeight: 'bold' }}
             >
-               Acrescentar Atualização / Ligação
+               Nova Observação
             </Button>
           </Grid>
 
           {/* Coluna Direita: Análise IA Gemini */}
           <Grid item xs={12} md={7}>
             <Box sx={{ backgroundColor: 'greatek.darkGrey', p: 3, borderRadius: 2, height: '100%' }}>
-              <Typography variant="h6" color="secondary" mb={1} sx={{ display: 'flex', alignItems: 'center' }}>
-                ✨ Análise Tática da Inteligência Artificial
+              <Typography variant="h6" color="secondary" mb={2} sx={{ display: 'flex', alignItems: 'center' }}>
+                ✨ Inteligência do Vendedor & IA
               </Typography>
               
               <Box sx={{ p: 2, backgroundColor: 'white', borderRadius: 2, mb: 3 }}>
-                <Typography variant="subtitle2" color="greatek.darkBlue" fontWeight="bold">Resumo da Conversa</Typography>
-                <Typography variant="body2" fontStyle="italic" sx={{ mb: 2 }}>
-                  "{lead.resumo}"
-                </Typography>
+                <Typography variant="subtitle2" color="greatek.darkBlue" fontWeight="bold">Resumo & Contexto</Typography>
+                {isEditing ? (
+                  <TextField 
+                    fullWidth multiline rows={3} value={editedLead.resumo} 
+                    onChange={(e) => handleInputChange('resumo', e.target.value)} sx={{ mt: 1, mb: 2 }} 
+                  />
+                ) : (
+                  <Typography variant="body2" fontStyle="italic" sx={{ mb: 2, mt: 1 }}>
+                    "{lead.resumo}"
+                  </Typography>
+                )}
 
-                <Typography variant="subtitle2" color="success.main" fontWeight="bold">Produto Ofertado/Procurado</Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  {lead.produto_ofertado || 'Não identificado'}
-                </Typography>
+                <Typography variant="subtitle2" color="success.main" fontWeight="bold">Produto Ofertado</Typography>
+                {isEditing ? (
+                  <TextField 
+                    fullWidth value={editedLead.produto_ofertado} 
+                    onChange={(e) => handleInputChange('produto_ofertado', e.target.value)} sx={{ mt: 1, mb: 2 }} 
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
+                    {lead.produto_ofertado || 'Não identificado'}
+                  </Typography>
+                )}
 
-                <Typography variant="subtitle2" color="error.main" fontWeight="bold">Objeções Levantadas</Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  {lead.objecoes || 'Nenhuma objeção clara identificada'}
-                </Typography>
+                <Typography variant="subtitle2" color="error.main" fontWeight="bold">Objeções Ativas</Typography>
+                {isEditing ? (
+                  <TextField 
+                    fullWidth value={editedLead.objecoes} 
+                    onChange={(e) => handleInputChange('objecoes', e.target.value)} sx={{ mt: 1, mb: 2 }} 
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
+                    {lead.objecoes || 'Nenhuma objeção clara'}
+                  </Typography>
+                )}
 
-                <Typography variant="subtitle2" color="warning.main" fontWeight="bold">Gaps (O que faltou perguntar)</Typography>
-                <Typography variant="body2">
-                  {lead.gaps || 'Conversa devidamente qualificada'}
-                </Typography>
+                <Typography variant="subtitle2" color="warning.main" fontWeight="bold">Gaps de Qualificação</Typography>
+                {isEditing ? (
+                  <TextField 
+                    fullWidth value={editedLead.gaps} 
+                    onChange={(e) => handleInputChange('gaps', e.target.value)} sx={{ mt: 1 }} 
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    {lead.gaps || 'Devidamente qualificada'}
+                  </Typography>
+                )}
               </Box>
 
-              <Typography variant="subtitle2" fontWeight="bold" mb={2} color="primary">Trilha de Conversa & Atividades</Typography>
+              <Typography variant="subtitle2" fontWeight="bold" mb={2} color="primary">Histórico de Atividade</Typography>
               <Box component="ul" sx={{ pl: 0, m: 0, listStyle: 'none' }}>
                 {lead.historico_ia.map((hist, index) => (
                   <Box component="li" key={index} sx={{ mb: 2, p: 2, backgroundColor: 'white', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
@@ -178,26 +264,16 @@ function LeadDetailPage() {
       <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ color: 'primary.main', fontWeight: 'bold' }}>Registrar Interação</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Descreva o que foi conversado na ligação, envio de proposta ou reunião.
-          </Typography>
           <TextField
-            autoFocus
-            margin="dense"
-            label="Detalhes da atualização..."
-            type="text"
-            fullWidth
-            multiline
-            rows={4}
-            variant="outlined"
-            value={newNote}
+            autoFocus margin="dense" label="Detalhes da atualização..." type="text"
+            fullWidth multiline rows={4} variant="outlined" value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 0 }}>
           <Button onClick={handleCloseModal} color="inherit">Cancelar</Button>
           <Button onClick={handleSaveNote} variant="contained" color="secondary">
-            Salvar no Histórico
+            Salvar
           </Button>
         </DialogActions>
       </Dialog>

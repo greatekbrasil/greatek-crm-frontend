@@ -40,6 +40,16 @@ export const updateLead = async (leadId, updatedData) => {
   }
 };
 
+export const deleteLead = async (leadId) => {
+  try {
+    const response = await axiosInstance.delete(`/leads/${leadId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Erro ao deletar lead ${leadId}:`, error);
+    throw error;
+  }
+};
+
 export const getDirectorDashboardData = async () => {
   try {
     const response = await axiosInstance.get('/reports/director');
