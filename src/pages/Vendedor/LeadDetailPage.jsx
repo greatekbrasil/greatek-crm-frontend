@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Grid, Button, Divider, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton } from '@mui/material';
+import { Box, Typography, Paper, Grid, Button, Divider, Chip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, IconButton, Autocomplete } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddCommentIcon from '@mui/icons-material/AddComment';
 import EditIcon from '@mui/icons-material/Edit';
@@ -9,6 +9,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import LoadingSpinner from '../../components/LoadingSpinner/LoadingSpinner';
 import { getLeads, updateLead } from '../../api/leads';
 import { normalizeLead } from '../../utils/normalization';
+import { KNOWLEDGE_BASE_PRODUCTS } from '../../data/knowledgeBase';
 
 function LeadDetailPage() {
   const { leadId } = useParams();
@@ -211,11 +212,31 @@ function LeadDetailPage() {
                   </Typography>
                 )}
 
-                <Typography variant="subtitle2" color="success.main" fontWeight="bold">Produto Ofertado</Typography>
+                <Typography variant="subtitle2" color="success.main" fontWeight="bold">Produto Solicitado (Cliente)</Typography>
                 {isEditing ? (
-                  <TextField 
-                    fullWidth value={editedLead.produto_ofertado} 
-                    onChange={(e) => handleInputChange('produto_ofertado', e.target.value)} sx={{ mt: 1, mb: 2 }} 
+                  <Autocomplete
+                    freeSolo
+                    options={KNOWLEDGE_BASE_PRODUCTS.map((option) => option.name)}
+                    value={editedLead.produto_solicitado || ''}
+                    onChange={(event, newValue) => handleInputChange('produto_solicitado', newValue)}
+                    onInputChange={(event, newInputValue) => handleInputChange('produto_solicitado', newInputValue)}
+                    renderInput={(params) => <TextField {...params} variant="standard" sx={{ mt: 1, mb: 2 }} />}
+                  />
+                ) : (
+                  <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
+                    {lead.produto_solicitado || 'Não especificado'}
+                  </Typography>
+                )}
+
+                <Typography variant="subtitle2" color="greatek.darkBlue" fontWeight="bold">Produto Ofertado (Vendedor)</Typography>
+                {isEditing ? (
+                  <Autocomplete
+                    freeSolo
+                    options={KNOWLEDGE_BASE_PRODUCTS.map((option) => option.name)}
+                    value={editedLead.produto_ofertado || ''}
+                    onChange={(event, newValue) => handleInputChange('produto_ofertado', newValue)}
+                    onInputChange={(event, newInputValue) => handleInputChange('produto_ofertado', newInputValue)}
+                    renderInput={(params) => <TextField {...params} variant="standard" sx={{ mt: 1, mb: 2 }} />}
                   />
                 ) : (
                   <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
