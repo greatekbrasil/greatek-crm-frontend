@@ -176,63 +176,35 @@ export default function SalespersonReportPage() {
 }
 
 // --- Componente de Diretiva Executiva IA ---
-function DynamicExecutiveDirective({ vendedorData, leads }) {
+function DynamicExecutiveDirective({ vendedorData }) {
   const theme = useTheme();
   const [diretiva, setDiretiva] = useState('Carregando análise executiva...');
   const [loadingDiretiva, setLoadingDiretiva] = useState(true);
 
   useEffect(() => {
-    if (!vendedorData || !leads || leads.length === 0) return;
+    if (!vendedorData || !vendedorData.id) return;
 
     const fetchDiretiva = async () => {
-      // Tentar as variações de nome de variável (VITE_GEMINI_KEY ou VITE_GEMINI_API_KEY)
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY;
-      
-      if (!apiKey || apiKey === 'sua_chave_aqui' || apiKey.length < 10) {
-        setDiretiva('Configuração Pendente: A chave de API do Gemini não foi encontrada ou é inválida. Certifique-se de configurar a variável VITE_GEMINI_API_KEY no Railway.');
-        setLoadingDiretiva(false);
-        return;
-      }
-
       setLoadingDiretiva(true);
       try {
-        const prompt = gerarDiretivaExecutiva(vendedorData, leads);
-
+        // Chamada ao backend próprio (mais seguro e centralizado)
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-            })
-          }
+            `https://greatek-crm-backend-production.up.railway.app/diretiva/${vendedorData.id}`
         );
-
-        if (!response.ok) {
-           const errorData = await response.json();
-           throw new Error(errorData.error?.message || 'Erro na comunicação com a IA');
-        }
-
         const data = await response.json();
-        const texto = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
-        if (!texto) throw new Error('A IA não retornou um conteúdo válido.');
-        
-        setDiretiva(texto);
+        if (data.error) throw new Error(data.error);
+        setDiretiva(data.diretiva);
       } catch (err) {
         console.error('Erro ao gerar diretiva:', err);
-        setDiretiva(`Falha na IA: ${err.message}. Verifique a cota e validade da chave VITE_GEMINI_API_KEY.`);
+        setDiretiva('Não foi possível gerar a análise no momento. Verifique a conexão com o servidor.');
       } finally {
         setLoadingDiretiva(false);
       }
     };
 
     fetchDiretiva();
-  }, [vendedorData, leads]);
+  }, [vendedorData?.id]);
 
   return (
     <Paper sx={{
@@ -262,52 +234,4 @@ function DynamicExecutiveDirective({ vendedorData, leads }) {
     </Paper>
   );
 }
-
-const gerarDiretivaExecutiva = (vendedorData, leads) => {
-  const prompt = `Você é um diretor comercial sênior com 20 anos de experiência em vendas B2B de tecnologia e infraestrutura. Você analisa o desempenho de vendedores e gera diretrizes executivas precisas, diretas e acionáveis. Você NUNCA elogia sem embasamento em dados. Você NUNCA suaviza problemas reais. Sua análise vale milhões para a empresa.
-
-## DADOS DO VENDEDOR
-Nome: ${vendedorData.name}
-Instância/ID: ${vendedorData.id}
-Leads tratados no total: ${vendedorData.kpis.leadsTratados}
-Leads hoje: ${vendedorData.stats.hoje}
-Leads esta semana: ${vendedorData.stats.semana}
-Leads este mês: ${vendedorData.stats.mes}
-
-## LEADS ANALISADOS PELA IA (dados reais do CRM)
-${leads.map((l, i) => `
-Lead ${i + 1}:
-- Nome: ${l.nome_exibicao || l.nome_lead}
-- Empresa: ${l.nome_empresa}
-- Interesse: ${l.interesse_lead || l.produto_ofertado}
-- Urgência: ${l.urgencia}
-- Temperatura: ${l.temperatura || 'Não informada'}
-- Probabilidade de fechamento: ${l.probabilidade_percent || 0}%
-- Objeções levantadas: ${l.objecoes}
-- Resumo da conversa: ${l.resumo}
-- Próximo passo registrado: ${l.proximo_passo}
-`).join('\n')}
-
-## SUA TAREFA
-Com base exclusivamente nos dados acima, gere uma Diretiva Executiva em português brasileiro com exatamente estas 5 seções. Seja específico, cite nomes de leads e produtos reais. Máximo de 3 frases por seção.
-
-**PONTOS FORTES IDENTIFICADOS**
-[O que este vendedor demonstra fazer bem com base nas conversas e dados — cite evidências concretas dos leads acima]
-
-**GAPS CRÍTICOS E OPORTUNIDADES PERDIDAS**
-[O que o vendedor deixou de explorar, produtos que poderiam ter sido ofertados, objeções que não foram tratadas, leads que esfriaram por falta de follow-up — seja direto e implacável]
-
-**PRODUTOS QUE DEVERIAM TER SIDO OFERTADOS**
-[Com base nos interesses demonstrados pelos leads, quais produtos complementares ou alternativos o vendedor deveria ter apresentado mas não apresentou — seja específico]
-
-**PLANO DE AÇÃO PARA OS PRÓXIMOS 7 DIAS**
-[3 ações concretas e prioritárias que este vendedor deve executar imediatamente para maximizar conversão — com prazo e lead específico quando aplicável]
-
-**POTENCIAL DE RECEITA ESTIMADO**
-[Com base nas probabilidades e urgências dos leads ativos, estime o potencial de fechamento deste vendedor nos próximos 30 dias — seja conservador e realista]
-
-Escreva em tom executivo, direto, sem rodeios. Cada palavra deve ter peso. Este relatório será lido pela diretoria.`;
-
-  return prompt;
-};
 
